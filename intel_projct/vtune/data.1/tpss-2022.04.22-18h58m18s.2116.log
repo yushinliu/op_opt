@@ -1,0 +1,25 @@
+Pin: pin-3.21-98471-3d26d9b74
+Copyright 2002-2020 Intel Corporation.
+ [tid:2121] injector:
+LD_LIBRARY_PATH for the application is: /opt/intel/oneapi/vtune/2022.0.0/lib32/runtime:/opt/intel/oneapi/vtune/2022.0.0/lib64/runtime
+ [tid:2121] injector:
+LD_ASSUME_KERNEL for the application is undefined
+ [tid:2121] injector:
+LD_BIND_NOW for the application is undefined
+ [tid:2121] injector:
+LD_PRELOAD for the application is undefined
+ [tid:2121] injector:
+UNIX_INJECTOR::Run() 
+ [tid:2121] injector:
+
+
+***********************
+* Running PtraceLoader*
+***********************
+ [tid:2121] injector:
+PtraceLoader: Executing: /opt/intel/oneapi/vtune/2022.0.0/bin64/pinbin -p32 /opt/intel/oneapi/vtune/2022.0.0/bin32/pinbin -error_file /home/liuyuxin/intel/vtune/data.1/pinerr.tpsslog -xyzzy -mesgon log_probe -mesgon log_syscall -mesgon log_injector -logfile /home/liuyuxin/intel/vtune/data.1/tpss-2022.04.22-18h58m18s.2116.log -detach_reattach -follow_execv -tool_load_option deepbind -t64 /opt/intel/oneapi/vtune/2022.0.0/lib64/libtpsstool.so -t /opt/intel/oneapi/vtune/2022.0.0/lib32/libtpsstool.so -server_name tpss_ipc.2116 -prd_dir /opt/intel/oneapi/vtune/2022.0.0 -- ./a.out 
+ [tid:2121] injector:
+followExecv = 0, runningAppPid = 0, waitingAppPid = 0
+ [tid:2121] injector:
+ParentExecAppWithInjectorControl: App pid = 2121
+E:  Fork for injector launcher failed: Bad address
