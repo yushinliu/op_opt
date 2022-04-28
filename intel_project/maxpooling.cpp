@@ -98,6 +98,25 @@ private:
 
 /***
  *
+ * Check if the C channls of res and add meet the requirement of broadcasting;
+ *
+ ***/
+void check_broadcast(Tensor& res, Tensor& add){
+    auto res_sizes = res.size();
+    auto add_sizes = add.size();
+    for(int i=0;i<res_sizes.size();i++){
+        int C_add = add_sizes.at(i);
+        int C_res = res_sizes.at(i);
+        if(i==1){
+            if(C_res%C_add) throw "Can not broadcast!";
+        } else if(C_add!=C_res) {
+            throw "Can not broadcast!";
+        }
+    }
+}
+
+/***
+ *
  * maxpooling_add: fusion kernel of maxpooling and elementwise-add;
  *
  * Input tensor:
@@ -111,6 +130,7 @@ private:
  ***/
 Tensor maxpooling_add(Tensor &src, Tensor& add_src, Tensor &res){
     // kernel = 3, pad = 1, stride = 2;
+    clock_t start = clock();
     int k = 3;
 
     // retrive the input ouput sizes
@@ -122,16 +142,21 @@ Tensor maxpooling_add(Tensor &src, Tensor& add_src, Tensor &res){
     int H_out = res.size().at(2);
     int W_out = res.size().at(3);
 
+    check_broadcast(res,add_src);
+    int C_add = add_src.size().at(1);
+
     vector<int> index_size = res.size();
     vector<int> buffer_size = {k*k};
-    Tensor buffer(buffer_size);
-    int* buffer_ptr = buffer.rawPtr();
     index_size.push_back(2);
     Tensor index_out(index_size);
 
     // start calculate
-    clock_t start = clock();
-#pragma omp for 
+    // FIXME: using parallel causes correct output of max values but false result of index map;
+#pragma omp parallel num_threads(4)
+    {
+    Tensor buffer(buffer_size);
+    int* buffer_ptr = buffer.rawPtr();
+#pragma omp for
     for(int n=0;n<N;n++){
         for(int c=0;c<C;c++){
             for(int h=0;h<H_out;h++){
@@ -155,15 +180,21 @@ Tensor maxpooling_add(Tensor &src, Tensor& add_src, Tensor &res){
                     }
                     auto max_iter = max_element(buffer_ptr,buffer_ptr+k*k);
                     max_num = *max_iter;
-                    int idx = distance(buffer_ptr, max_iter);
+                    int idx = 0;
+                    // NOTICE: using distance will cause sligtly different index map comparing with for loop method;
+                    // int idx = distance(buffer_ptr, max_iter);
+                    for(int i=0;i<k*k;i++){
+                        if(buffer_ptr[i]==max_num) idx = i;
+                    }
                     int i_idx = 2*h+idx/k;
                     int j_idx = 2*w+idx%k;
                     index_out[n*C*H_out*W_out + c*H_out*W_out + h*W_out + w] = i_idx;
                     index_out[n*C*H_out*W_out + c*H_out*W_out + h*W_out + w + 1] = j_idx;
-                    res[n*C*H_out*W_out + c*H_out*W_out + h*W_out + w] = max_num + add_src[n*H_out*W_out + h*W_out + w];
+                    res[n*C*H_out*W_out + c*H_out*W_out + h*W_out + w] = max_num + add_src[n*H_out*W_out + (c%C_add)*H_out*W_out + h*W_out + w];
                 }
             }
         }
+    }
     }
     // end calculate
     clock_t end = clock();
@@ -177,7 +208,6 @@ Tensor maxpooling_add(Tensor &src, Tensor& add_src, Tensor &res){
  * readTxt is to read the data from the txt path;
  *
  ***/
-
 Tensor readTxt(const string& path, vector<int>& sizes){
     ifstream input(path);
     Tensor a(sizes);
@@ -195,14 +225,17 @@ Tensor readTxt(const string& path, vector<int>& sizes){
  * compare is the unittest module which compares two tensors;
  *
  ***/
-
 void compare(Tensor& a, Tensor& b){
     try {
         if(!a.empty()||!b.empty()) throw "Tensors must be non-empty!";
         if(a.size()!=b.size()) throw "Sizes of tensors are not equal!";
         int len = a.len();
         for(int i=0;i<len;i++){
-            if(a[i]!=b[i]) throw "Value of tensors are not equal!";
+            if(a[i]!=b[i]){
+
+            cout << a[i] << " " << b[i] << endl;
+            throw "Value of tensors are not equal!";
+        }
         }
     } catch(const char* msg) {
         cout << msg << endl;
@@ -229,7 +262,7 @@ int main(){
     string out_path = "./output.txt";
     string out_idx_path = "./output_idx.txt";
     string gt_path = "./gt.txt";
-    string gt_idx_path = "./gt_idx.txt";
+    string gt_idx_path = "./gt_idx1.txt";
     vector<int> pooling_sizes = {N,C,H,W};
     vector<int> add_sizes = {N,1,H_out,W_out};
     vector<int> out_sizes = {N,C,H_out,W_out};
