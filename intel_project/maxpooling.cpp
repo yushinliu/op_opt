@@ -7,6 +7,7 @@
 #include<algorithm>
 #include<cstring>
 #include<unordered_map>
+#include<omp.h>
 
 
 using namespace std;
@@ -191,6 +192,8 @@ unordered_map<string,MaxpoolingAdd> op_maps;
 void MaxpoolingAdd::forward(Tensor &src, Tensor &add){
     // kernel = 3, pad = 1, stride = 2;
     clock_t start = clock();
+    omp_set_num_threads(4);
+    double start_1 = omp_get_wtime();
 
     // retrive the input ouput sizes
     int N = src_size.at(0);
@@ -265,8 +268,10 @@ void MaxpoolingAdd::forward(Tensor &src, Tensor &add){
     }
     }
     // end calculate
+    double end_1 = omp_get_wtime();
     clock_t end = clock();
     std::cout << "Spend: " << (double)(end-start)/CLOCKS_PER_SEC << " seconds" << std::endl;
+    std::cout << "Omp Spend: " << (double)(end_1-start_1) << " seconds" << std::endl;
 }
 
 /***
